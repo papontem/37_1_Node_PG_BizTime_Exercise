@@ -24,14 +24,26 @@ router.get("/", async (req, res, next) => {
 router.get("/:code", async (req, res, next) => {
 	try {
 		const { code } = req.params;
-		const results = await db.query("SELECT * FROM companies WHERE code = $1", [
-			code,
-		]);
-		if (results.rows.length === 0) {
+		const comp_results = await db.query(
+			"SELECT * FROM companies WHERE code = $1",
+			[code]
+		);
+		if (comp_results.rows.length === 0) {
 			throw new ExpressError(`Can't find company with code of ${code}`, 404);
 		}
-		// console.log(results.rows);
-		return res.send({ company: results.rows[0] });
+		const invoices_result = await db.query(
+			"SELECT id FROM invoices WHERE comp_code = $1",
+			[code]
+		);
+		// console.log(comp_results.rows);
+		return res.send({
+			company: {
+				code: comp_results.rows[0].code,
+				name: comp_results.rows[0].name,
+				description: comp_results.rows[0].description,
+				invoices: invoices_result.rows,
+			},
+		});
 	} catch (e) {
 		return next(e);
 	}
@@ -45,6 +57,7 @@ router.post("/", async (req, res, next) => {
 			"INSERT INTO companies (code, name, description) VALUES ($1, $2, $3) RETURNING code, name, description",
 			[code, name, description]
 		);
+
 		return res.status(201).json({ company: results.rows[0] });
 	} catch (e) {
 		return next(e);
